@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs-extra');
@@ -6,22 +7,51 @@ const simpleGit = require('simple-git');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-    const git = simpleGit();
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+const DEFAULT_COMMIT_MESSAGE = process.env.DEFAULT_COMMIT_MESSAGE || 'Update markdown files';
+
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: CLIENT_URL,
   credentials: true
 }));
 app.use(express.json());
 
-const REPOS_DIR = path.join(__dirname, 'repos');
+// Get repos directory from .env or use default
+const REPOS_BASE_DIR = process.env.REPOS_BASE_DIR || path.join(__dirname, 'repos');
+const REPOS_DIR = path.isAbsolute(REPOS_BASE_DIR) 
+  ? REPOS_BASE_DIR 
+  : path.join(__dirname, '..', REPOS_BASE_DIR);
+
 fs.ensureDirSync(REPOS_DIR);
+console.log(`Repositories will be stored in: ${REPOS_DIR}`);
+
+// Helper function to get git username
+async function getGitUsername() {
+  try {
+    const git = simpleGit();
+    const username = await git.raw(['config', 'user.name']);
+    return username.trim().replace(/[^a-zA-Z0-9-_]/g, '_');
+  } catch (error) {
+    console.error('Failed to get git username:', error);
+    return 'default_user';
+  }
+}
+
+// Helper function to get user-specific repo path
+async function getUserRepoPath(repoName) {
+  const username = await getGitUsername();
+  const userDir = path.join(REPOS_DIR, username);
+  fs.ensureDirSync(userDir);
+  return path.join(userDir, repoName);
+}
 
 // Clone or pull repository
 app.post('/api/repo/sync', async (req, res) => {
   try {
     const { repoUrl, token } = req.body;
     const repoName = repoUrl.split('/').pop().replace('.git', '');
-    const repoPath = path.join(REPOS_DIR, repoName);
+    const repoPath = await getUserRepoPath(repoName);
+    const username = await getGitUsername();
     
     if (!token) {
       return res.status(400).json({ error: 'Access token is required for private repositories' });
@@ -46,7 +76,7 @@ app.post('/api/repo/sync', async (req, res) => {
 // Get branches
 app.get('/api/branches/:repo', async (req, res) => {
   try {
-    const repoPath = path.join(REPOS_DIR, req.params.repo);
+    const repoPath = await getUserRepoPath(req.params.repo);
     const git = simpleGit(repoPath);
     const branches = await git.branch(['-r']);
     const branchList = branches.all.map(b => b.replace('origin/', '')).filter(b => b !== 'HEAD');
@@ -59,7 +89,7 @@ app.get('/api/branches/:repo', async (req, res) => {
 // Get git status
 app.get('/api/status/:repo', async (req, res) => {
   try {
-    const repoPath = path.join(REPOS_DIR, req.params.repo);
+    const repoPath = await getUserRepoPath(req.params.repo);
     const git = simpleGit(repoPath);
     const status = await git.status();
     const modifiedFiles = [...status.modified, ...status.created, ...status.staged];
@@ -73,7 +103,7 @@ app.get('/api/status/:repo', async (req, res) => {
 app.post('/api/branch/:repo/switch', async (req, res) => {
   try {
     const { branch } = req.body;
-    const repoPath = path.join(REPOS_DIR, req.params.repo);
+    const repoPath = await getUserRepoPath(req.params.repo);
     const git = simpleGit(repoPath);
     await git.checkout(branch);
     res.json({ success: true });
@@ -85,7 +115,7 @@ app.post('/api/branch/:repo/switch', async (req, res) => {
 // List markdown files
 app.get('/api/files/:repo', async (req, res) => {
   try {
-    const repoPath = path.join(REPOS_DIR, req.params.repo);
+    const repoPath = await getUserRepoPath(req.params.repo);
     const files = await getMarkdownFiles(repoPath);
     res.json(files);
   } catch (error) {
@@ -96,7 +126,8 @@ app.get('/api/files/:repo', async (req, res) => {
 // Read file content
 app.get('/api/file/:repo/*', async (req, res) => {
   try {
-    const filePath = path.join(REPOS_DIR, req.params.repo, req.params[0]);
+    const repoPath = await getUserRepoPath(req.params.repo);
+    const filePath = path.join(repoPath, req.params[0]);
     const content = await fs.readFile(filePath, 'utf8');
     res.json({ content });
   } catch (error) {
@@ -107,7 +138,8 @@ app.get('/api/file/:repo/*', async (req, res) => {
 // Save file content
 app.put('/api/file/:repo/*', async (req, res) => {
   try {
-    const filePath = path.join(REPOS_DIR, req.params.repo, req.params[0]);
+    const repoPath = await getUserRepoPath(req.params.repo);
+    const filePath = path.join(repoPath, req.params[0]);
     await fs.writeFile(filePath, req.body.content);
     res.json({ success: true });
   } catch (error) {
@@ -119,7 +151,7 @@ app.put('/api/file/:repo/*', async (req, res) => {
 app.post('/api/repo/:repo/commit', async (req, res) => {
   try {
     const { message, token, repoUrl } = req.body;
-    const repoPath = path.join(REPOS_DIR, req.params.repo);
+    const repoPath = await getUserRepoPath(req.params.repo);
     const git = simpleGit(repoPath);
     
     const status = await git.status();
@@ -131,7 +163,7 @@ app.post('/api/repo/:repo/commit', async (req, res) => {
     await git.addRemote('origin', authUrl).catch(() => {});
     
     await git.add('.');
-    await git.commit(message || 'Update markdown files');
+    await git.commit(message || DEFAULT_COMMIT_MESSAGE);
     const currentBranch = await git.revparse(['--abbrev-ref', 'HEAD']);
     await git.push('origin', currentBranch);
     

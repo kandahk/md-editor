@@ -5,31 +5,75 @@
 }
 
 .header {
-  background: #f5f5f5;
+  background: #007bff;
   padding: 1rem;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #0056b3;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logo {
+  height: 40px;
+  width: 40px;
+  object-fit: contain;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: white;
+  font-weight: 600;
+}
+
+.repo-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .repo-controls input {
-  margin-right: 0.5rem;
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   width: 200px;
 }
 
-.repo-controls button,
-.file-controls button {
+.repo-controls button {
   padding: 0.5rem 1rem;
-  background: #007bff;
+  background: #28a745;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   margin-left: 0.5rem;
+  font-weight: bold;
+}
+
+.repo-controls button:hover {
+  background: #218838;
+}
+
+.file-controls button {
+  padding: 0.5rem 1rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  font-weight: bold;
+}
+
+.file-controls button:hover {
+  background: #218838;
 }
 
 .file-controls select {
@@ -192,47 +236,88 @@
   color: #333;
 }
 
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.file-tree {
+  margin-bottom: 4rem;
 }
 
-.sidebar li {
-  padding: 0.5rem;
+.tree-folder {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
   cursor: pointer;
   border-radius: 4px;
-  margin-bottom: 0.25rem;
   font-size: 0.9rem;
+  user-select: none;
 }
 
-.sidebar li:hover {
+.tree-folder:hover {
   background: #e9ecef;
 }
 
-.sidebar li.active {
+.folder-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.folder-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.tree-children {
+  margin-left: 0.5rem;
+}
+
+.tree-file {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.tree-file:hover {
+  background: #e9ecef;
+}
+
+.tree-file.active {
   background: #007bff;
   color: white;
 }
 
-.sidebar li.unsaved {
+.tree-file.active .file-name {
+  color: white;
+}
+
+.file-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.file-name {
+  color: #333;
+}
+
+.tree-file.unsaved .file-name {
   font-style: italic;
   color: #dc3545;
 }
 
-.sidebar li.active.unsaved {
-  background: #007bff;
+.tree-file.active.unsaved .file-name {
   color: white;
   font-style: italic;
 }
 
-.sidebar li.uncommitted {
+.tree-file.uncommitted .file-name {
   color: #fd7e14;
   font-weight: bold;
 }
 
-.sidebar li.active.uncommitted {
-  background: #007bff;
+.tree-file.active.uncommitted .file-name {
   color: white;
   font-weight: bold;
 }
