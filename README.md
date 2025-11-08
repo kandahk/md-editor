@@ -7,7 +7,7 @@ A web-based markdown editor with WYSIWYG preview and git integration for GitHub/
 - **WYSIWYG Editor**: Real-time markdown preview with split-pane editing
 - **Git Integration**: Clone, sync, commit, and push to GitHub/GitLab repositories
 - **File Management**: Browse and edit markdown files from repositories
-- **Auto-save**: Save changes locally before committing
+- **Auto-save**: Save changes locally to browser before committing
 
 ## Setup
 
@@ -31,7 +31,7 @@ This will start:
 2. **Authentication**: Add access token for private repositories
 3. **Sync**: Click "Sync Repo" to clone/pull the repository
 4. **Edit**: Select markdown files from the sidebar to edit
-5. **Save**: Use "Save" to save changes locally
+5. **Save**: Use "Save" to save changes to the server
 6. **Commit**: Use "Commit & Push" to push changes to the repository
 
 ## API Endpoints
@@ -47,3 +47,6 @@ This will start:
 - **Frontend**: React, TypeScript, @uiw/react-md-editor
 - **Backend**: Node.js, Express, simple-git
 - **Storage**: Local file system with git repositories
+
+## Author
+Abhi
