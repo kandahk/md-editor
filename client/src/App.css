@@ -335,6 +335,73 @@
   flex: 1;
   padding: 1rem;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 0;
+}
+
+.toolbar-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #e9ecef;
+  border-color: #999;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.save-btn {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.toolbar-btn.save-btn:hover:not(:disabled) {
+  background: #218838;
+  border-color: #1e7e34;
+}
+
+.toolbar-btn.revert-btn {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+.toolbar-btn.revert-btn:hover:not(:disabled) {
+  background: #c82333;
+  border-color: #bd2130;
+}
+
+.file-status {
+  margin-left: auto;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.unsaved-indicator {
+  color: #dc3545;
+  font-weight: 600;
 }
 
 .welcome {

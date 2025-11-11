@@ -35,6 +35,8 @@ function App() {
   const [commitMessage, setCommitMessage] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [gitProvider, setGitProvider] = useState<'github' | 'gitlab'>('github');
+  const [editHistory, setEditHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Initialize Mermaid
   useEffect(() => {
@@ -169,6 +171,11 @@ function App() {
       }
       
       setCurrentFile(filePath);
+      
+      // Initialize edit history
+      const initialContent = savedContent || (await fetch(`${API_URL}/api/file/${currentRepo}/${filePath}`).then(r => r.json())).content;
+      setEditHistory([initialContent]);
+      setHistoryIndex(0);
     } catch (error) {
       console.error('Failed to load file:', error);
     }
@@ -194,9 +201,37 @@ function App() {
         newMap.delete(currentFile);
         return newMap;
       });
+      setEditHistory([]);
+      setHistoryIndex(-1);
       loadGitStatus(currentRepo);
     } catch (error) {
       console.error('Failed to save file:', error);
+    }
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setContent(editHistory[newIndex]);
+    }
+  };
+
+  const revertChanges = () => {
+    if (window.confirm('Are you sure you want to revert all unsaved changes?')) {
+      setContent(originalContent);
+      setFileContents(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(currentFile);
+        return newMap;
+      });
+      setUnsavedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(currentFile);
+        return newSet;
+      });
+      setEditHistory([originalContent]);
+      setHistoryIndex(0);
     }
   };
 
@@ -359,7 +394,6 @@ function App() {
                 <option key={branch} value={branch}>{branch}</option>
               ))}
             </select>
-            <button onClick={saveFile} disabled={!currentFile}>Save</button>
           </div>
         )}
       </header>
@@ -379,23 +413,60 @@ function App() {
 
         <div className="editor-container">
           {currentFile ? (
-            <MDEditor
-              value={content}
-              onChange={(val) => {
-                const newContent = val || '';
-                setContent(newContent);
-                setFileContents(prev => new Map(prev).set(currentFile, newContent));
-                if (newContent !== originalContent) {
-                  setUnsavedFiles(prev => new Set(prev).add(currentFile));
-                } else {
-                  setUnsavedFiles(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(currentFile);
-                    return newSet;
-                  });
-                }
-              }}
-              height={600}
+            <>
+              <div className="editor-toolbar">
+                <button 
+                  onClick={handleUndo} 
+                  disabled={historyIndex <= 0}
+                  className="toolbar-btn"
+                  title="Undo (Ctrl+Z)"
+                >
+                  ↶ Undo
+                </button>
+                <button 
+                  onClick={saveFile} 
+                  disabled={!currentFile || content === originalContent}
+                  className="toolbar-btn save-btn"
+                  title="Save file"
+                >
+                  💾 Save
+                </button>
+                <button 
+                  onClick={revertChanges} 
+                  disabled={content === originalContent}
+                  className="toolbar-btn revert-btn"
+                  title="Revert all unsaved changes"
+                >
+                  ↺ Revert
+                </button>
+                <span className="file-status">
+                  {content !== originalContent && <span className="unsaved-indicator">● Unsaved changes</span>}
+                </span>
+              </div>
+              <MDEditor
+                value={content}
+                onChange={(val) => {
+                  const newContent = val || '';
+                  setContent(newContent);
+                  
+                  // Update edit history
+                  const newHistory = editHistory.slice(0, historyIndex + 1);
+                  newHistory.push(newContent);
+                  setEditHistory(newHistory);
+                  setHistoryIndex(newHistory.length - 1);
+                  
+                  setFileContents(prev => new Map(prev).set(currentFile, newContent));
+                  if (newContent !== originalContent) {
+                    setUnsavedFiles(prev => new Set(prev).add(currentFile));
+                  } else {
+                    setUnsavedFiles(prev => {
+                      const newSet = new Set(prev);
+                      newSet.delete(currentFile);
+                      return newSet;
+                    });
+                  }
+                }}
+                height={550}
               data-color-mode="light"
               previewOptions={{
                 components: {
@@ -436,7 +507,8 @@ function App() {
                   },
                 },
               }}
-            />
+              />
+            </>
           ) : (
             <div className="welcome">
               <h2>Markdown Editor</h2>
