@@ -37,6 +37,11 @@ function App() {
   const [gitProvider, setGitProvider] = useState<'github' | 'gitlab'>('github');
   const [editHistory, setEditHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
 
   // Initialize Mermaid
   useEffect(() => {
@@ -218,7 +223,7 @@ function App() {
   };
 
   const revertChanges = () => {
-    if (window.confirm('Are you sure you want to revert all unsaved changes?')) {
+    showConfirm('Are you sure you want to revert all unsaved changes?', () => {
       setContent(originalContent);
       setFileContents(prev => {
         const newMap = new Map(prev);
@@ -232,12 +237,31 @@ function App() {
       });
       setEditHistory([originalContent]);
       setHistoryIndex(0);
+    });
+  };
+
+  const showAlert = (message: string) => {
+    setAlertMessage(message);
+    setShowAlertModal(true);
+  };
+
+  const showConfirm = (message: string, callback: () => void) => {
+    setConfirmMessage(message);
+    setConfirmCallback(() => callback);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirm = () => {
+    if (confirmCallback) {
+      confirmCallback();
     }
+    setShowConfirmModal(false);
+    setConfirmCallback(null);
   };
 
   const openCommitModal = () => {
     if (uncommittedFiles.size === 0) {
-      alert('No changes to commit');
+      showAlert('No changes to commit');
       return;
     }
     setShowCommitModal(true);
@@ -245,7 +269,7 @@ function App() {
 
   const commitChanges = async () => {
     if (!commitMessage.trim()) {
-      alert('Please enter a commit message');
+      showAlert('Please enter a commit message');
       return;
     }
     
@@ -258,7 +282,7 @@ function App() {
       setShowCommitModal(false);
       setCommitMessage('');
       loadGitStatus(currentRepo);
-      alert('Changes committed and pushed!');
+      showAlert('Changes committed and pushed!');
     } catch (error) {
       console.error('Failed to commit:', error);
     }
@@ -542,6 +566,35 @@ function App() {
             <div className="modal-buttons">
               <button onClick={() => setShowCommitModal(false)}>Cancel</button>
               <button onClick={commitChanges} className="commit-btn">Commit & Push</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {showAlertModal && (
+        <div className="modal-overlay">
+          <div className="alert-modal">
+            <div className="alert-content">
+              <p>{alertMessage}</p>
+            </div>
+            <div className="alert-buttons">
+              <button onClick={() => setShowAlertModal(false)} className="alert-ok-btn">OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {showConfirmModal && (
+        <div className="modal-overlay">
+          <div className="confirm-modal">
+            <div className="confirm-content">
+              <p>{confirmMessage}</p>
+            </div>
+            <div className="confirm-buttons">
+              <button onClick={() => setShowConfirmModal(false)} className="confirm-cancel-btn">Cancel</button>
+              <button onClick={handleConfirm} className="confirm-ok-btn">Confirm</button>
             </div>
           </div>
         </div>

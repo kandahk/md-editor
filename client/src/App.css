@@ -404,6 +404,68 @@
   font-weight: 600;
 }
 
+.alert-modal,
+.confirm-modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.alert-content,
+.confirm-content {
+  margin-bottom: 1.5rem;
+}
+
+.alert-content p,
+.confirm-content p {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.5;
+}
+
+.alert-buttons,
+.confirm-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.alert-ok-btn,
+.confirm-ok-btn,
+.confirm-cancel-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.alert-ok-btn,
+.confirm-ok-btn {
+  background: #007bff;
+  color: white;
+}
+
+.alert-ok-btn:hover,
+.confirm-ok-btn:hover {
+  background: #0056b3;
+}
+
+.confirm-cancel-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.confirm-cancel-btn:hover {
+  background: #5a6268;
+}
+
 .welcome {
   text-align: center;
   margin-top: 2rem;
