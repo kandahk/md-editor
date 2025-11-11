@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import MDEditor from '@uiw/react-md-editor';
+import mermaid from 'mermaid';
 import './App.css';
 
 interface FileItem {
@@ -33,6 +34,48 @@ function App() {
   const [showCommitModal, setShowCommitModal] = useState(false);
   const [commitMessage, setCommitMessage] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [gitProvider, setGitProvider] = useState<'github' | 'gitlab'>('github');
+
+  // Initialize Mermaid
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose',
+    });
+  }, []);
+
+  // Re-render Mermaid diagrams when content changes
+  useEffect(() => {
+    const renderMermaid = async () => {
+      const mermaidElements = document.querySelectorAll('code.mermaid:not([data-processed])');
+      
+      for (let i = 0; i < mermaidElements.length; i++) {
+        const element = mermaidElements[i] as HTMLElement;
+        const code = element.textContent?.trim() || '';
+        
+        if (code && code.length > 0) {
+          element.setAttribute('data-processed', 'true');
+          const id = `mermaid-diagram-${Date.now()}-${i}`;
+          
+          try {
+            const { svg } = await mermaid.render(id, code);
+            // Instead of replacing, just update innerHTML
+            element.innerHTML = svg;
+            element.style.display = 'block';
+            element.style.textAlign = 'center';
+          } catch (error) {
+            console.error('Mermaid rendering error:', error);
+            element.textContent = `Error rendering diagram: ${error}`;
+          }
+        }
+      }
+    };
+
+    if (content) {
+      setTimeout(renderMermaid, 300);
+    }
+  }, [content]);
 
   const syncRepo = async () => {
     if (!repoUrl) return;
@@ -42,7 +85,7 @@ function App() {
       const response = await fetch(`${API_URL}/api/repo/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl, token })
+        body: JSON.stringify({ repoUrl, token, provider: gitProvider })
       });
       
       const data = await response.json();
@@ -175,7 +218,7 @@ function App() {
       await fetch(`${API_URL}/api/repo/${currentRepo}/commit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: commitMessage, token, repoUrl })
+        body: JSON.stringify({ message: commitMessage, token, repoUrl, provider: gitProvider })
       });
       setShowCommitModal(false);
       setCommitMessage('');
@@ -284,15 +327,23 @@ function App() {
           <h1 className="app-title">Markdown Editor</h1>
         </div>
         <div className="repo-controls">
+          <select 
+            value={gitProvider} 
+            onChange={(e) => setGitProvider(e.target.value as 'github' | 'gitlab')}
+            className="provider-select"
+          >
+            <option value="github">GitHub</option>
+            <option value="gitlab">GitLab</option>
+          </select>
           <input
             type="text"
-            placeholder="Repository URL (GitHub/GitLab) "
+            placeholder="Repository URL"
             value={repoUrl}
             onChange={(e) => setRepoUrl(e.target.value)}
           />
           <input
             type="password"
-            placeholder="Access Token (optional)"
+            placeholder="Access Token"
             value={token}
             onChange={(e) => setToken(e.target.value)}
           />
@@ -346,6 +397,45 @@ function App() {
               }}
               height={600}
               data-color-mode="light"
+              previewOptions={{
+                components: {
+                  code: ({ inline, children = [], className, ...props }: any) => {
+                    if (inline) {
+                      return <code>{children}</code>;
+                    }
+                    
+                    // Extract the actual code content from React elements
+                    const extractText = (node: any): string => {
+                      if (typeof node === 'string') {
+                        return node;
+                      }
+                      if (Array.isArray(node)) {
+                        return node.map(extractText).join('');
+                      }
+                      if (node && typeof node === 'object' && node.props && node.props.children) {
+                        return extractText(node.props.children);
+                      }
+                      return '';
+                    };
+                    
+                    const codeString = extractText(children);
+                    
+                    // Check if it's a mermaid code block
+                    if (
+                      typeof className === 'string' &&
+                      /^language-mermaid/.test(className.toLowerCase())
+                    ) {
+                      return (
+                        <code className="mermaid" style={{ display: 'block', whiteSpace: 'pre' }}>
+                          {codeString}
+                        </code>
+                      );
+                    }
+                    
+                    return <code className={String(className)}>{children}</code>;
+                  },
+                },
+              }}
             />
           ) : (
             <div className="welcome">

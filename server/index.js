@@ -45,19 +45,29 @@ async function getUserRepoPath(repoName) {
   return path.join(userDir, repoName);
 }
 
+// Helper function to create authenticated URL
+function createAuthUrl(repoUrl, token, provider = 'github') {
+  if (provider === 'gitlab') {
+    // GitLab uses oauth2 token format
+    return repoUrl.replace('https://gitlab.com/', `https://oauth2:${token}@gitlab.com/`);
+  } else {
+    // GitHub uses token directly
+    return repoUrl.replace('https://github.com/', `https://${token}@github.com/`);
+  }
+}
+
 // Clone or pull repository
 app.post('/api/repo/sync', async (req, res) => {
   try {
-    const { repoUrl, token } = req.body;
+    const { repoUrl, token, provider = 'github' } = req.body;
     const repoName = repoUrl.split('/').pop().replace('.git', '');
     const repoPath = await getUserRepoPath(repoName);
-    const username = await getGitUsername();
     
     if (!token) {
       return res.status(400).json({ error: 'Access token is required for private repositories' });
     }
     
-    const authUrl = repoUrl.replace('https://github.com/', `https://${token}@github.com/`);
+    const authUrl = createAuthUrl(repoUrl, token, provider);
     const git = simpleGit();
     
     if (await fs.pathExists(repoPath)) {
@@ -150,7 +160,7 @@ app.put('/api/file/:repo/*', async (req, res) => {
 // Commit and push changes
 app.post('/api/repo/:repo/commit', async (req, res) => {
   try {
-    const { message, token, repoUrl } = req.body;
+    const { message, token, repoUrl, provider = 'github' } = req.body;
     const repoPath = await getUserRepoPath(req.params.repo);
     const git = simpleGit(repoPath);
     
@@ -159,12 +169,24 @@ app.post('/api/repo/:repo/commit', async (req, res) => {
       return res.json({ success: true, message: 'No changes to commit' });
     }
     
-    const authUrl = repoUrl.replace('https://github.com/', `https://${token}@github.com/`);
+    const authUrl = createAuthUrl(repoUrl, token, provider);
     await git.addRemote('origin', authUrl).catch(() => {});
     
+    // Get current branch
+    const currentBranch = await git.revparse(['--abbrev-ref', 'HEAD']);
+    
+    // Stage and commit local changes first
     await git.add('.');
     await git.commit(message || DEFAULT_COMMIT_MESSAGE);
-    const currentBranch = await git.revparse(['--abbrev-ref', 'HEAD']);
+    
+    // Pull with rebase to integrate remote changes
+    try {
+      await git.pull('origin', currentBranch, {'--rebase': 'true'});
+    } catch (pullError) {
+      console.log('Pull warning (might be first push or no remote changes):', pullError.message);
+    }
+    
+    // Push to remote
     await git.push('origin', currentBranch);
     
     res.json({ success: true });

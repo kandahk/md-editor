@@ -39,6 +39,15 @@
   gap: 0.5rem;
 }
 
+.provider-select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-weight: 500;
+}
+
 .repo-controls input {
   padding: 0.5rem;
   border: 1px solid #ccc;
