@@ -2,6 +2,8 @@
 
 A web-based markdown editor with WYSIWYG preview and git integration for GitHub/GitLab repositories.
 
+![Product Image](docs/images/md-editor-product.png)
+
 ## Features
 
 - **WYSIWYG Editor**: Real-time markdown preview with split-pane editing
