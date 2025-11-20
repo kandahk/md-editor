@@ -8,7 +8,13 @@ A web-based markdown editor with WYSIWYG preview and git integration for GitHub/
 
 - **WYSIWYG Editor**: Real-time markdown preview with split-pane editing
 - **Git Integration**: Clone, sync, commit, and push to GitHub/GitLab repositories
-- **File Management**: Browse and edit markdown files from repositories
+- **File Management**: 
+  - Browse and edit markdown files from repositories
+  - Create new markdown files
+  - Create folders to organize files
+  - Upload images
+  - Delete files
+  - Right-click context menu for quick actions
 - **Auto-save**: Save changes locally to browser before committing
 
 ## Setup
@@ -39,9 +45,13 @@ This will start:
 ## API Endpoints
 
 - `POST /api/repo/sync` - Clone or pull repository
-- `GET /api/files/:repo` - List markdown files
+- `GET /api/files/:repo` - List markdown and image files
 - `GET /api/file/:repo/*` - Read file content
 - `PUT /api/file/:repo/*` - Save file content
+- `POST /api/file/:repo/*` - Create new file
+- `DELETE /api/file/:repo/*` - Delete file
+- `POST /api/folder/:repo/*` - Create new folder
+- `POST /api/upload/:repo/*` - Upload image file
 - `POST /api/repo/:repo/commit` - Commit and push changes
 
 ## Tech Stack

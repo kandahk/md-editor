@@ -162,9 +162,74 @@
 }
 
 .changed-files li {
-  padding: 0.25rem 0;
-  color: #fd7e14;
-  font-weight: bold;
+  padding: 0.5rem;
+  margin: 0.25rem 0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.changed-files li.status-modified {
+  background: #fff3cd;
+  border-left: 3px solid #ffc107;
+}
+
+.changed-files li.status-added {
+  background: #d4edda;
+  border-left: 3px solid #28a745;
+}
+
+.changed-files li.status-deleted {
+  background: #f8d7da;
+  border-left: 3px solid #dc3545;
+}
+
+.changed-files li.status-renamed {
+  background: #d1ecf1;
+  border-left: 3px solid #17a2b8;
+}
+
+.changed-files .status-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.changed-files .file-path {
+  flex: 1;
+  color: #333;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.changed-files .status-label {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.status-modified .status-label {
+  background: #ffc107;
+  color: #856404;
+}
+
+.status-added .status-label {
+  background: #28a745;
+  color: white;
+}
+
+.status-deleted .status-label {
+  background: #dc3545;
+  color: white;
+}
+
+.status-renamed .status-label {
+  background: #17a2b8;
+  color: white;
 }
 
 .commit-message {
@@ -484,4 +549,245 @@
 
 .w-md-editor-preview {
   padding: 1rem;
+}
+.s
+idebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.file-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.icon-btn {
+  padding: 0.25rem 0.5rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: #0056b3;
+}
+
+.new-file-modal,
+.new-folder-modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.new-file-modal h3,
+.new-folder-modal h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.modal-path {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.new-file-modal input,
+.new-folder-modal input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  box-sizing: border-box;
+}
+
+.new-file-modal input:focus,
+.new-folder-modal input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.create-btn {
+  background: #007bff !important;
+  color: white;
+}
+
+.create-btn:hover {
+  background: #0056b3 !important;
+}
+
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 150px;
+  padding: 0.25rem 0;
+}
+
+.context-menu-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+}
+
+.context-menu-item:hover {
+  background: #f8f9fa;
+}
+
+.context-menu-item.delete {
+  color: #dc3545;
+}
+
+.context-menu-item.delete:hover {
+  background: #fff5f5;
+}
+
+.image-preview-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+.image-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.image-preview-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.delete-btn {
+  background: #dc3545 !important;
+  color: white;
+  border-color: #dc3545 !important;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background: #c82333 !important;
+  border-color: #bd2130 !important;
+}
+
+.image-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2rem;
+  overflow: auto;
+  margin-bottom: 1rem;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.image-info {
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.image-info p {
+  margin: 0.5rem 0;
+  color: #333;
+}
+
+.image-info code {
+  display: block;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9rem;
+  color: #d63384;
+  word-break: break-all;
+}
+
+.tree-folder.selected {
+  background: #e7f3ff;
+  border-left: 3px solid #007bff;
+}
+
+.selected-folder-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: #e7f3ff;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.selected-folder-info span {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clear-selection {
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 3px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.clear-selection:hover {
+  background: #cce5ff;
+  color: #333;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: #ddd;
+  margin: 0.25rem 0;
 }

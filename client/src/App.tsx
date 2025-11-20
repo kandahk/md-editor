@@ -4,8 +4,8 @@ import mermaid from 'mermaid';
 import './App.css';
 
 interface FileItem {
-  name: string;
   path: string;
+  type: 'file' | 'folder';
 }
 
 interface TreeNode {
@@ -21,7 +21,7 @@ function App() {
   const [repoUrl, setRepoUrl] = useState('');
   const [token, setToken] = useState('');
   const [currentRepo, setCurrentRepo] = useState('');
-  const [files, setFiles] = useState<string[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [currentFile, setCurrentFile] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,6 +31,7 @@ function App() {
   const [originalContent, setOriginalContent] = useState('');
   const [fileContents, setFileContents] = useState<Map<string, string>>(new Map());
   const [uncommittedFiles, setUncommittedFiles] = useState<Set<string>>(new Set());
+  const [fileStatuses, setFileStatuses] = useState<Map<string, string>>(new Map());
   const [showCommitModal, setShowCommitModal] = useState(false);
   const [commitMessage, setCommitMessage] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -42,6 +43,15 @@ function App() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
+  const [showNewFileModal, setShowNewFileModal] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [newFilePath, setNewFilePath] = useState('');
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderPath, setNewFolderPath] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; path: string; isDirectory: boolean } | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string>('');
 
   // Initialize Mermaid
   useEffect(() => {
@@ -147,8 +157,18 @@ function App() {
   const loadGitStatus = async (repo: string) => {
     try {
       const response = await fetch(`${API_URL}/api/status/${repo}`);
-      const modifiedFiles = await response.json();
-      setUncommittedFiles(new Set(modifiedFiles));
+      const statusData = await response.json();
+      
+      const files = new Set<string>();
+      const statuses = new Map<string, string>();
+      
+      statusData.forEach((item: { file: string; status: string }) => {
+        files.add(item.file);
+        statuses.set(item.file, item.status);
+      });
+      
+      setUncommittedFiles(files);
+      setFileStatuses(statuses);
     } catch (error) {
       console.error('Failed to load git status:', error);
     }
@@ -156,6 +176,9 @@ function App() {
 
   const loadFile = async (filePath: string) => {
     try {
+      // Clear image selection
+      setSelectedImage(null);
+      
       // Save current file content before switching
       if (currentFile && content !== originalContent) {
         setFileContents(prev => new Map(prev).set(currentFile, content));
@@ -184,6 +207,12 @@ function App() {
     } catch (error) {
       console.error('Failed to load file:', error);
     }
+  };
+
+  const loadImage = (imagePath: string) => {
+    setCurrentFile('');
+    setContent('');
+    setSelectedImage(imagePath);
   };
 
   const saveFile = async () => {
@@ -259,6 +288,186 @@ function App() {
     setConfirmCallback(null);
   };
 
+  const createNewFile = async () => {
+    if (!newFileName.trim()) {
+      showAlert('Please enter a file name');
+      return;
+    }
+    
+    const fileName = newFileName.endsWith('.md') ? newFileName : `${newFileName}.md`;
+    const fullPath = newFilePath ? `${newFilePath}/${fileName}` : fileName;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/file/${currentRepo}/${fullPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: '# New File\n\nStart editing...' })
+      });
+      
+      if (response.ok) {
+        setShowNewFileModal(false);
+        setNewFileName('');
+        setNewFilePath('');
+        loadFiles(currentRepo);
+        showAlert('File created successfully!');
+      } else {
+        const data = await response.json();
+        showAlert(data.error || 'Failed to create file');
+      }
+    } catch (error) {
+      console.error('Failed to create file:', error);
+      showAlert('Failed to create file');
+    }
+  };
+
+  const createNewFolder = async () => {
+    if (!newFolderName.trim()) {
+      showAlert('Please enter a folder name');
+      return;
+    }
+    
+    const fullPath = newFolderPath ? `${newFolderPath}/${newFolderName}` : newFolderName;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/folder/${currentRepo}/${fullPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        setShowNewFolderModal(false);
+        setNewFolderName('');
+        setNewFolderPath('');
+        loadFiles(currentRepo);
+        showAlert('Folder created successfully!');
+      } else {
+        const data = await response.json();
+        showAlert(data.error || 'Failed to create folder');
+      }
+    } catch (error) {
+      console.error('Failed to create folder:', error);
+      showAlert('Failed to create folder');
+    }
+  };
+
+  const deleteFile = async (filePath: string) => {
+    showConfirm(`Are you sure you want to delete ${filePath}?`, async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/file/${currentRepo}/${filePath}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          if (currentFile === filePath) {
+            setCurrentFile('');
+            setContent('');
+          }
+          if (selectedImage === filePath) {
+            setSelectedImage(null);
+          }
+          loadFiles(currentRepo);
+          showAlert('File deleted successfully!');
+        } else {
+          const data = await response.json();
+          showAlert(data.error || 'Failed to delete file');
+        }
+      } catch (error) {
+        console.error('Failed to delete file:', error);
+        showAlert('Failed to delete file');
+      }
+    });
+  };
+
+  const deleteFolder = async (folderPath: string) => {
+    showConfirm(`Are you sure you want to delete the folder "${folderPath}" and all its contents?`, async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/folder/${currentRepo}/${folderPath}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          // Clear selection if deleted folder was selected
+          if (selectedFolder === folderPath || selectedFolder.startsWith(folderPath + '/')) {
+            setSelectedFolder('');
+          }
+          // Clear current file if it was in the deleted folder
+          if (currentFile.startsWith(folderPath + '/')) {
+            setCurrentFile('');
+            setContent('');
+          }
+          // Clear selected image if it was in the deleted folder
+          if (selectedImage && selectedImage.startsWith(folderPath + '/')) {
+            setSelectedImage(null);
+          }
+          loadFiles(currentRepo);
+          showAlert('Folder deleted successfully!');
+        } else {
+          const data = await response.json();
+          showAlert(data.error || 'Failed to delete folder');
+        }
+      } catch (error) {
+        console.error('Failed to delete folder:', error);
+        showAlert('Failed to delete folder');
+      }
+    });
+  };
+
+  const uploadImage = async (folderPath?: string) => {
+    const targetPath = folderPath !== undefined ? folderPath : selectedFolder;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        const response = await fetch(`${API_URL}/api/upload/${currentRepo}/${targetPath}`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          loadFiles(currentRepo);
+          showAlert('Image uploaded successfully!');
+        } else {
+          const data = await response.json();
+          showAlert(data.error || 'Failed to upload image');
+        }
+      } catch (error) {
+        console.error('Failed to upload image:', error);
+        showAlert('Failed to upload image');
+      }
+    };
+    input.click();
+  };
+
+  const openNewFileModal = (folderPath?: string) => {
+    const targetPath = folderPath !== undefined ? folderPath : selectedFolder;
+    setNewFilePath(targetPath);
+    setShowNewFileModal(true);
+  };
+
+  const openNewFolderModal = (folderPath?: string) => {
+    const targetPath = folderPath !== undefined ? folderPath : selectedFolder;
+    setNewFolderPath(targetPath);
+    setShowNewFolderModal(true);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, path: string, isDirectory: boolean) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, path, isDirectory });
+  };
+
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
   const openCommitModal = () => {
     if (uncommittedFiles.size === 0) {
       showAlert('No changes to commit');
@@ -288,11 +497,11 @@ function App() {
     }
   };
 
-  const buildFileTree = (filePaths: string[]): TreeNode[] => {
+  const buildFileTree = (items: FileItem[]): TreeNode[] => {
     const root: TreeNode[] = [];
     
-    filePaths.forEach(filePath => {
-      const parts = filePath.split('/');
+    items.forEach(item => {
+      const parts = item.path.split('/');
       let currentLevel = root;
       
       parts.forEach((part, index) => {
@@ -307,11 +516,11 @@ function App() {
           const newNode: TreeNode = {
             name: part,
             path: parts.slice(0, index + 1).join('/'),
-            isDirectory: !isLastPart,
-            children: !isLastPart ? [] : undefined
+            isDirectory: isLastPart ? item.type === 'folder' : true,
+            children: (isLastPart && item.type === 'file') ? undefined : []
           };
           currentLevel.push(newNode);
-          if (!isLastPart && newNode.children) {
+          if (newNode.children) {
             currentLevel = newNode.children;
           }
         }
@@ -323,7 +532,12 @@ function App() {
 
   const fileTree = useMemo(() => buildFileTree(files), [files]);
 
-  const toggleFolder = (path: string) => {
+  const toggleFolder = (path: string, selectOnly: boolean = false) => {
+    if (selectOnly) {
+      setSelectedFolder(path);
+      return;
+    }
+    
     setExpandedFolders(prev => {
       const newSet = new Set(prev);
       if (newSet.has(path)) {
@@ -333,17 +547,20 @@ function App() {
       }
       return newSet;
     });
+    setSelectedFolder(path);
   };
 
   const renderTreeNode = (node: TreeNode, level: number = 0): React.ReactNode => {
     if (node.isDirectory) {
       const isExpanded = expandedFolders.has(node.path);
+      const isSelected = selectedFolder === node.path;
       return (
         <div key={node.path}>
           <div 
-            className="tree-folder"
+            className={`tree-folder ${isSelected ? 'selected' : ''}`}
             style={{ paddingLeft: `${level * 1}rem` }}
             onClick={() => toggleFolder(node.path)}
+            onContextMenu={(e) => handleContextMenu(e, node.path, true)}
           >
             <span className="folder-icon">{isExpanded ? '📂' : '📁'}</span>
             <span className="folder-name">{node.name}</span>
@@ -359,15 +576,17 @@ function App() {
       const isActive = node.path === currentFile;
       const isUnsaved = unsavedFiles.has(node.path);
       const isUncommitted = uncommittedFiles.has(node.path);
+      const isImage = node.name.match(/\.(png|jpg|jpeg|gif|svg)$/i);
       
       return (
         <div
           key={node.path}
-          className={`tree-file ${isActive ? 'active' : ''} ${isUnsaved ? 'unsaved' : ''} ${isUncommitted ? 'uncommitted' : ''}`}
+          className={`tree-file ${(isActive || selectedImage === node.path) ? 'active' : ''} ${isUnsaved ? 'unsaved' : ''} ${isUncommitted ? 'uncommitted' : ''}`}
           style={{ paddingLeft: `${level * 1}rem` }}
-          onClick={() => loadFile(node.path)}
+          onClick={() => isImage ? loadImage(node.path) : loadFile(node.path)}
+          onContextMenu={(e) => handleContextMenu(e, node.path, false)}
         >
-          <span className="file-icon">📄</span>
+          <span className="file-icon">{isImage ? '🖼️' : '📄'}</span>
           <span className="file-name">
             {node.name}
             {isUnsaved && ' ●'}
@@ -425,7 +644,20 @@ function App() {
       <div className="main-content">
         {currentRepo && (
           <div className="sidebar">
-            <h3>Files</h3>
+            <div className="sidebar-header">
+              <h3>Files</h3>
+              <div className="file-actions">
+                <button onClick={() => openNewFileModal()} title="New File" className="icon-btn">📄+</button>
+                <button onClick={() => openNewFolderModal()} title="New Folder" className="icon-btn">📁+</button>
+                <button onClick={() => uploadImage()} title="Upload Image" className="icon-btn">🖼️+</button>
+              </div>
+            </div>
+            {selectedFolder && (
+              <div className="selected-folder-info">
+                <span>📁 {selectedFolder || 'Root'}</span>
+                <button onClick={() => setSelectedFolder('')} className="clear-selection" title="Clear selection">✕</button>
+              </div>
+            )}
             <div className="file-tree">
               {fileTree.map(node => renderTreeNode(node))}
             </div>
@@ -436,7 +668,31 @@ function App() {
         )}
 
         <div className="editor-container">
-          {currentFile ? (
+          {selectedImage ? (
+            <div className="image-preview-container">
+              <div className="image-preview-header">
+                <h3>{selectedImage}</h3>
+                <button 
+                  onClick={() => deleteFile(selectedImage)}
+                  className="toolbar-btn delete-btn"
+                  title="Delete image"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+              <div className="image-preview">
+                <img 
+                  src={`${API_URL}/api/image/${currentRepo}/${selectedImage}`} 
+                  alt={selectedImage}
+                />
+              </div>
+              <div className="image-info">
+                <p><strong>Path:</strong> {selectedImage}</p>
+                <p><strong>URL for markdown:</strong></p>
+                <code>![{selectedImage.split('/').pop()}]({selectedImage})</code>
+              </div>
+            </div>
+          ) : currentFile ? (
             <>
               <div className="editor-toolbar">
                 <button 
@@ -494,6 +750,31 @@ function App() {
               data-color-mode="light"
               previewOptions={{
                 components: {
+                  img: ({ src, alt, ...props }: any) => {
+                    // Convert relative image paths to API URLs
+                    let imageSrc = src;
+                    if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('data:')) {
+                      let cleanSrc = src;
+                      
+                      // If path is relative (doesn't start with /), resolve it relative to current file
+                      if (!src.startsWith('/') && currentFile) {
+                        const currentDir = currentFile.substring(0, currentFile.lastIndexOf('/'));
+                        if (currentDir) {
+                          cleanSrc = `${currentDir}/${src}`;
+                        }
+                      } else if (src.startsWith('/')) {
+                        // Remove leading slash
+                        cleanSrc = src.substring(1);
+                      }
+                      
+                      imageSrc = `${API_URL}/api/image/${currentRepo}/${cleanSrc}`;
+                      console.log('Image URL:', { original: src, currentFile, converted: imageSrc, repo: currentRepo });
+                    }
+                    return <img src={imageSrc} alt={alt} {...props} onError={(e) => {
+                      console.error('Image failed to load:', imageSrc);
+                      e.currentTarget.style.border = '2px solid red';
+                    }} />;
+                  },
                   code: ({ inline, children = [], className, ...props }: any) => {
                     if (inline) {
                       return <code>{children}</code>;
@@ -549,9 +830,23 @@ function App() {
             <div className="changed-files">
               <h4>Files to be committed:</h4>
               <ul>
-                {Array.from(uncommittedFiles).map(file => (
-                  <li key={file}>{file}</li>
-                ))}
+                {Array.from(uncommittedFiles).map(file => {
+                  const status = fileStatuses.get(file) || 'modified';
+                  const statusIcon = {
+                    'modified': '📝',
+                    'added': '➕',
+                    'deleted': '🗑️',
+                    'renamed': '📋'
+                  }[status] || '📝';
+                  
+                  return (
+                    <li key={file} className={`status-${status}`}>
+                      <span className="status-icon">{statusIcon}</span>
+                      <span className="file-path">{file}</span>
+                      <span className="status-label">{status}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
             <div className="commit-message">
@@ -597,6 +892,80 @@ function App() {
               <button onClick={handleConfirm} className="confirm-ok-btn">Confirm</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* New File Modal */}
+      {showNewFileModal && (
+        <div className="modal-overlay">
+          <div className="new-file-modal">
+            <h3>Create New File</h3>
+            {newFilePath && <p className="modal-path">In: {newFilePath}</p>}
+            <input
+              type="text"
+              placeholder="File name (e.g., notes.md)"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && createNewFile()}
+              autoFocus
+            />
+            <div className="modal-buttons">
+              <button onClick={() => { setShowNewFileModal(false); setNewFileName(''); setNewFilePath(''); }}>Cancel</button>
+              <button onClick={createNewFile} className="create-btn">Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Folder Modal */}
+      {showNewFolderModal && (
+        <div className="modal-overlay">
+          <div className="new-folder-modal">
+            <h3>Create New Folder</h3>
+            {newFolderPath && <p className="modal-path">In: {newFolderPath}</p>}
+            <input
+              type="text"
+              placeholder="Folder name"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && createNewFolder()}
+              autoFocus
+            />
+            <div className="modal-buttons">
+              <button onClick={() => { setShowNewFolderModal(false); setNewFolderName(''); setNewFolderPath(''); }}>Cancel</button>
+              <button onClick={createNewFolder} className="create-btn">Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div 
+          className="context-menu" 
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          {contextMenu.isDirectory ? (
+            <>
+              <div className="context-menu-item" onClick={() => { openNewFileModal(contextMenu.path); setContextMenu(null); }}>
+                📄 New File
+              </div>
+              <div className="context-menu-item" onClick={() => { openNewFolderModal(contextMenu.path); setContextMenu(null); }}>
+                📁 New Folder
+              </div>
+              <div className="context-menu-item" onClick={() => { uploadImage(contextMenu.path); setContextMenu(null); }}>
+                🖼️ Upload Image
+              </div>
+              <div className="context-menu-divider"></div>
+              <div className="context-menu-item delete" onClick={() => { deleteFolder(contextMenu.path); setContextMenu(null); }}>
+                🗑️ Delete Folder
+              </div>
+            </>
+          ) : (
+            <div className="context-menu-item delete" onClick={() => { deleteFile(contextMenu.path); setContextMenu(null); }}>
+              🗑️ Delete
+            </div>
+          )}
         </div>
       )}
     </div>
