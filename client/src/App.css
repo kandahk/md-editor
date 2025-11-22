@@ -565,9 +565,9 @@ idebar-header {
 
 .icon-btn {
   padding: 0.25rem 0.5rem;
-  background: #007bff;
-  color: white;
-  border: none;
+  background: transparent;
+  color: #333;
+  border: 1px solid #ddd;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.85rem;
@@ -575,7 +575,8 @@ idebar-header {
 }
 
 .icon-btn:hover {
-  background: #0056b3;
+  background: #e9ecef;
+  border-color: #999;
 }
 
 .new-file-modal,
